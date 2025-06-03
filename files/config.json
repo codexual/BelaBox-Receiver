@@ -1,0 +1,117 @@
+{
+  "user": {
+    "id": null,
+    "name": "STREAMER-NAME-HERE",
+    "passwordHash": null
+  },
+  "switcher": {
+    "bitrateSwitcherEnabled": true,
+    "onlySwitchWhenStreaming": true,
+    "instantlySwitchOnRecover": true,
+    "autoSwitchNotification": true,
+    "retryAttempts": 5,
+    "triggers": {
+      "low": 50,
+      "rtt": 2500,
+      "offline": 350,
+      "rttOffline": null
+    },
+    "switchingScenes": {
+      "normal": "live",
+      "low": "live",
+      "offline": "offline"
+    },
+    "streamServers": [
+      {
+        "streamServer": {
+          "type": "SrtLiveServer",
+          "statsUrl": "http://127.0.0.1:8181/stats",
+          "publisher": "live/stream/STREAMER-NAME-HERE"
+        },
+        "name": "SRT",
+        "priority": 0,
+        "overrideScenes": null,
+        "dependsOn": null,
+        "enabled": true
+      }
+    ]
+  },
+  "software": {
+    "type": "Obs",
+    "host": "OBS IP ADDRESS HERE",
+    "password": "OBS PASSWORD HERE",
+    "port": 4455,
+    "collections": null
+  },
+  "chat": {
+    "platform": "Twitch",
+    "username": "STREAMER-NAME-HERE",
+    "admins": [
+      "STREAMER-NAME-HERE",
+      "moderator1",
+      "moderator2",
+      "moderator3"
+    ],
+    "language": "EN",
+    "prefix": "!",
+    "enablePublicCommands": true,
+    "enableModCommands": false,
+    "enableAutoStopStreamOnHostOrRaid": true,
+    "announceRaidOnAutoStop": true,
+    "commands": {
+      "Refresh": {
+        "permission": "Mod",
+        "userPermissions": null,
+        "alias": [
+          "r"
+        ]
+      },
+      "Switch": {
+        "permission": "Mod",
+        "userPermissions": null,
+        "alias": [
+          "ss"
+        ]
+      },
+      "Trigger": {
+        "permission": "Mod",
+        "userPermissions": null,
+        "alias": null
+      },
+      "Sourceinfo": {
+        "permission": "Mod",
+        "userPermissions": null,
+        "alias": null
+      },
+      "Bitrate": {
+        "permission": "Public",
+        "userPermissions": null,
+        "alias": [
+          "b"
+        ]
+      },
+      "Fix": {
+        "permission": "Mod",
+        "userPermissions": null,
+        "alias": [
+          "f"
+        ]
+      }
+    }
+  },
+  "optionalScenes": {
+    "starting": null,
+    "ending": null,
+    "privacy": null,
+    "refresh": null
+  },
+  "optionalOptions": {
+    "twitchTranscodingCheck": false,
+    "twitchTranscodingRetries": 5,
+    "twitchTranscodingDelaySeconds": 15,
+    "offlineTimeout": null,
+    "recordWhileStreaming": false,
+    "switchToStartingSceneOnStreamStart": false,
+    "switchFromStartingSceneToLiveScene": false
+  }
+}
