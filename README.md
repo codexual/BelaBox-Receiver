@@ -20,25 +20,67 @@ This project is a **cleaned-up, modernized, and simplified fork** of [rmoriz/bbo
 
 ### 🔧 Setup
 
-Clone this repo and run the appropriate script for your system:
+1. Clone this repository.
+2. Run the appropriate script for your system:
 
 #### 🐧 Linux / WSL
 ```bash
 ./run.sh
+```
 
-🪟 Windows
-run.bat — for cmd
+#### 🪟 Windows
+For Command Prompt:
+```cmd
+run.bat
+```
 
-run.ps1 — for PowerShell
+For PowerShell:
+```powershell
+.\run.ps1
+```
 
-These will:
+These scripts will:
+- Build the Docker image (if not already built).
+- Run the container with the correct ports exposed:
+  - **UDP 5000** — Ingest
+  - **TCP 8181** — SLS Stats
+  - **UDP 8282** — Playback
 
-Build the Docker image (if not already built)
+---
 
-Run the container with the correct ports:
+## 📡 How to Connect
 
-UDP 5000 for ingest
+### SLS Stats Page
+Open in your browser:
+```
+http://localhost:8181/stats
+```
 
-TCP 8181 for SLS stats
+### BelaBox App
+- **Host**: Your local IP or public IP
+- **Port**: `5000`
+- **Stream ID**: `live/stream/belabox`
 
-UDP 8282 for playback
+### OBS Media Source
+```
+srt://<your-ip>:8282/?streamid=play/stream/belabox
+```
+
+---
+
+## 📁 Files Included
+
+- `Dockerfile` — Cleaned and rebuilt
+- `run.sh` — For Linux
+- `run.bat` — For Windows CMD
+- `run.ps1` — For Windows PowerShell
+
+---
+
+## 🧠 Credits
+
+- [rmoriz/bbox-receiver](https://github.com/rmoriz/bbox-receiver) — Original Docker wrapper
+- [sherazarde/belabox-receiver](https://hub.docker.com/r/sherazarde/belabox-receiver) — Original image
+- **Community-updated and maintained by [You]**
+
+---
