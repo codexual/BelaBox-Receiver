@@ -10,9 +10,8 @@ This project is a **cleaned-up, modernized, and simplified fork** of [rmoriz/bbo
 
 - Rebuilt Dockerfile with updated package dependencies.
 - Removed deprecated or unnecessary tools.
-- Simplified run scripts for **Windows (`.bat`, `.ps1`) and Linux (`.sh`)**.
+- Simplified run scripts for **Windows (`.bat`) and Linux (`.sh`)**.
 - Supports persistent Docker image reuse (doesn't rebuild unless required).
-- No longer requires `config.json`.
 
 ---
 
@@ -32,11 +31,6 @@ This project is a **cleaned-up, modernized, and simplified fork** of [rmoriz/bbo
 For Command Prompt:
 ```cmd
 run.bat
-```
-
-For PowerShell:
-```powershell
-.\run.ps1
 ```
 
 These scripts will:
@@ -73,7 +67,6 @@ srt://<your-ip>:8282/?streamid=play/stream/belabox
 - `Dockerfile` — Cleaned and rebuilt
 - `run.sh` — For Linux
 - `run.bat` — For Windows CMD
-- `run.ps1` — For Windows PowerShell
 
 ---
 
@@ -81,6 +74,6 @@ srt://<your-ip>:8282/?streamid=play/stream/belabox
 
 - [rmoriz/bbox-receiver](https://github.com/rmoriz/bbox-receiver) — Original Docker wrapper
 - [sherazarde/belabox-receiver](https://hub.docker.com/r/sherazarde/belabox-receiver) — Original image
-- **Community-updated and maintained by [You]**
+- **Community-updated and maintained by Codexual**
 
 ---
