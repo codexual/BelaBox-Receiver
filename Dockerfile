@@ -81,7 +81,7 @@ COPY files/logprefix /usr/local/bin/logprefix
 RUN chmod 755 /usr/local/bin/logprefix && ldconfig
 
 # Install NOALBS binary
-ARG NOALBS_VERSION=v2.13.1
+ARG NOALBS_VERSION=v2.14.0
 RUN wget https://github.com/NOALBS/nginx-obs-automatic-low-bitrate-switching/releases/download/${NOALBS_VERSION}/noalbs-${NOALBS_VERSION}-x86_64-unknown-linux-musl.tar.gz -O /tmp/noalbs.tar.gz && \
     mkdir -p /app && \
     tar -xzf /tmp/noalbs.tar.gz -C /tmp && \
