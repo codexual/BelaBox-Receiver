@@ -21,6 +21,7 @@ services:
     container_name: belabox-receiver
     environment:
       ENABLE_NOALBS: "true"
+      OBS_SRT_PORT: "8282" # must match the port in this receiver's OBS source URL
     volumes:
       - ./files/sls.conf:/etc/sls/sls.conf:ro
     ports:
@@ -35,6 +36,7 @@ services:
     depends_on: [receiver]
     environment:
       ENABLE_NOALBS: "false"
+      OBS_SRT_PORT: "8283"
     volumes:
       - ./files/sls-2.conf:/etc/sls/sls.conf:ro
     ports:
@@ -49,6 +51,7 @@ services:
     depends_on: [receiver]
     environment:
       ENABLE_NOALBS: "false"
+      OBS_SRT_PORT: "8284"
     volumes:
       - ./files/sls-3.conf:/etc/sls/sls.conf:ro
     ports:

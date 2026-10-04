@@ -81,6 +81,7 @@ echo
 if [ "$DETACH" -eq 1 ]; then
     docker run -d --rm --name "$CONTAINER_NAME" \
         -e ENABLE_NOALBS="$ENABLE_NOALBS" \
+        -e OBS_SRT_PORT="$SRT_PORT" \
         -v "$SCRIPT_DIR/$SLS_CONF":/etc/sls/sls.conf:ro \
         -p "$SRTLA_PORT":5000/udp \
         -p "$STATS_PORT":8181 \
@@ -92,6 +93,7 @@ else
     echo
     docker run --rm -it --name "$CONTAINER_NAME" \
         -e ENABLE_NOALBS="$ENABLE_NOALBS" \
+        -e OBS_SRT_PORT="$SRT_PORT" \
         -v "$SCRIPT_DIR/$SLS_CONF":/etc/sls/sls.conf:ro \
         -p "$SRTLA_PORT":5000/udp \
         -p "$STATS_PORT":8181 \

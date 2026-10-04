@@ -107,9 +107,24 @@ RUN set -xe; \
 # Copy your config files
 COPY files/.env files/config.json /app/
 
+# obs-autofix: restarts a receiver's OBS media source when its BelaBox reconnects
+# (fixes broken audio after reconnects), and makes chat !fix reach every receiver.
+RUN set -xe; \
+    mkdir -p /opt/obs-autofix; \
+    cd /opt/obs-autofix; \
+    npm init -y > /dev/null; \
+    npm install --omit=dev ws@8;
+COPY files/obs-autofix.js /opt/obs-autofix/obs-autofix.js
+RUN printf '#!/bin/sh\nexec node /opt/obs-autofix/obs-autofix.js "$@"\n' > /usr/local/bin/obs-autofix; \
+    chmod 755 /usr/local/bin/obs-autofix;
+
 # NOALBS runs by default. Set ENABLE_NOALBS=false on extra receiver containers
 # so only one container controls OBS.
 ENV ENABLE_NOALBS=true
+# Set AUTO_FIX=false to turn obs-autofix off. OBS_SRT_PORT is the host SRT port
+# this receiver's OBS media source uses (the run scripts and compose set it).
+ENV AUTO_FIX=true
+ENV OBS_SRT_PORT=8282
 
 EXPOSE 5000/udp 8181/tcp 8282/udp
 CMD ["/usr/bin/supervisord"]

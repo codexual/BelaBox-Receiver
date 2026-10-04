@@ -131,13 +131,25 @@ Each BelaBox points at **its own port**. The stream ID can stay `live/stream/bel
 
 In OBS, add one Media Source per receiver. Port-forward the extra ports too if you stream remotely.
 
-### `!fix` and the extra cams
+### Audio fix (automatic)
 
-`!fix` / `!f` does not care which container a stream comes from. NOALBS (in the main container) asks OBS for the **current program scene** and restarts every SRT/RTMP media source in it. That includes sources inside nested scenes and groups, and hidden sources. A source in any other scene is skipped.
+When a BelaBox drops and reconnects, OBS often re-joins the stream mid-way and the audio turns to static until the media source restarts. That's what `!fix` does.
 
-So put every cam in the scene you're live on, for example `live`. If the POV or chest cam lives in its own scene, add that scene to `live` as a **Scene** source (you can hide it). One `!fix` then restarts all of them.
+Every receiver now does this by itself. A small helper, `obs-autofix`, watches the receiver's SLS stats. Each time its BelaBox (re)connects, it waits 5 seconds and then restarts that receiver's OBS media source the same way `!fix` does. It connects to OBS using the `software` settings in `files/config.json`, the same ones NOALBS uses. The extra containers don't need NOALBS for this.
 
-The extra containers don't need NOALBS for this, and you should not add them to `streamServers` in `config.json`. That list drives scene switching, not `!fix`.
+It finds the right OBS source by the **port in the source's `srt://` URL**: 8282 for the main cam, 8283 for receiver 2, 8284 for receiver 3. The run scripts and `docker-compose.yml` pass that port in as `OBS_SRT_PORT`. If your source URLs use other ports, or you'd rather pick sources by name, set `OBS_SOURCES` (comma-separated OBS source names) on that container.
+
+**Chat `!fix` / `!f` now restarts every cam.** On the main receiver, `obs-autofix` also reads your Twitch chat (anonymously, it never posts) and restarts the media sources of all receivers, in every OBS scene. It uses the same permission, admins and aliases as `chat.commands.Fix` in `config.json`. NOALBS still replies in chat as before.
+
+Useful commands:
+
+```bash
+docker logs -f belabox-receiver-2 | grep obs-autofix     # see restarts happen
+docker exec belabox-receiver-2 obs-autofix --now         # restart this receiver's OBS source now
+docker exec belabox-receiver obs-autofix --now --all     # restart every receiver's OBS source now
+```
+
+Set `AUTO_FIX=false` on a container to turn this off. `AUTOFIX_DELAY` changes the 5 second wait.
 
 ---
 
