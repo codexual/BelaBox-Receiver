@@ -4,6 +4,9 @@
 # Multiple receivers (main + 2 extras, each with its own SLS/SRTLA):
 #   docker compose --profile multi up -d
 #
+# Each receiver has its own SLS config (files/sls.conf, files/sls-2.conf, ...).
+# Edit one and run `docker compose restart <service>`. No rebuild needed.
+#
 # Only "receiver" runs NOALBS. The extras have ENABLE_NOALBS=false so they never
 # touch OBS. Add more extras by copying a block and shifting the host ports.
 
@@ -18,6 +21,8 @@ services:
     container_name: belabox-receiver
     environment:
       ENABLE_NOALBS: "true"
+    volumes:
+      - ./files/sls.conf:/etc/sls/sls.conf:ro
     ports:
       - "5000:5000/udp" # SRTLA ingest (BelaBox connects here)
       - "8181:8181"     # SLS stats
@@ -30,6 +35,8 @@ services:
     depends_on: [receiver]
     environment:
       ENABLE_NOALBS: "false"
+    volumes:
+      - ./files/sls-2.conf:/etc/sls/sls.conf:ro
     ports:
       - "5001:5000/udp"
       - "8182:8181"
@@ -42,6 +49,8 @@ services:
     depends_on: [receiver]
     environment:
       ENABLE_NOALBS: "false"
+    volumes:
+      - ./files/sls-3.conf:/etc/sls/sls.conf:ro
     ports:
       - "5002:5000/udp"
       - "8183:8181"

@@ -94,6 +94,33 @@ docker compose --profile multi up -d   # main + receiver-2 + receiver-3
 ```
 To add more, copy a `receiver-N` block in `docker-compose.yml` and shift its host ports.
 
+### Each container has its own `sls.conf`
+
+| Instance | Config file          |
+|----------|----------------------|
+| 1 (main) | `files/sls.conf`     |
+| 2        | `files/sls-2.conf`   |
+| 3        | `files/sls-3.conf`   |
+| N        | `files/sls-N.conf` (create it: `cp files/sls.conf files/sls-N.conf`) |
+
+The run scripts and `docker-compose.yml` mount the file over `/etc/sls/sls.conf` inside the container. To change one receiver (latency, stream names, etc.), edit its file and restart only that container. No rebuild needed:
+
+```bash
+docker restart belabox-receiver-2
+```
+
+Inside every config, **keep `http_port 8181;` and `listen 8282;`**. These are ports inside the container. Docker maps each instance's host ports to them, and `srtla_rec` forwards to 8282. Everything else is yours to change. Windows line endings are fine.
+
+For example, to call the POV stream `live/pov/cam` instead of `live/stream/belabox`, set this in `files/sls-2.conf`:
+
+```
+        app {
+            app_publisher pov;
+            app_player pov;
+        }
+```
+Then use stream ID `live/pov/cam` on that BelaBox and `srt://<your-ip>:8283/?streamid=play/pov/cam` in OBS.
+
 ### Connecting
 
 Each BelaBox points at **its own port**. The stream ID can stay `live/stream/belabox`, or you can give each one its own name:

@@ -9,6 +9,10 @@ setlocal EnableDelayedExpansion
 ::                  e.g. 2 -> 5001/8182/8283, 3 -> 5002/8183/8284
 ::   --rebuild Force a full rebuild of the image.
 ::   --detach  Run in the background (needed to start several from one window).
+::
+:: Each instance reads its own SLS config, mounted over /etc/sls/sls.conf:
+::   instance 1 -> files\sls.conf, instance N -> files\sls-N.conf
+:: Edit the file and restart the container. No rebuild needed.
 
 set IMAGE_NAME=belabox-receiver
 set INSTANCE=1
@@ -51,9 +55,17 @@ set /a SRT_PORT=8282+OFFSET
 if %INSTANCE% EQU 1 (
     set CONTAINER_NAME=belabox-receiver
     set ENABLE_NOALBS=true
+    set SLS_CONF=sls.conf
 ) else (
     set CONTAINER_NAME=belabox-receiver-%INSTANCE%
     set ENABLE_NOALBS=false
+    set SLS_CONF=sls-%INSTANCE%.conf
+)
+
+set "SLS_CONF_PATH=%~dp0files\%SLS_CONF%"
+if not exist "%SLS_CONF_PATH%" (
+    echo Missing files\%SLS_CONF%. Create it first, for example: copy files\sls.conf files\%SLS_CONF%
+    exit /b 1
 )
 
 echo ========================================
@@ -90,11 +102,13 @@ echo.
 echo Starting container %CONTAINER_NAME% (instance %INSTANCE%)...
 echo Ports: %SRTLA_PORT%/udp (SRTLA ingest), %STATS_PORT% (SLS stats), %SRT_PORT%/udp (SRT)
 echo NOALBS: %ENABLE_NOALBS%
+echo SLS config: files\%SLS_CONF%
 echo.
 
 if %DETACH% EQU 1 (
     docker run -d --rm --name %CONTAINER_NAME% ^
         -e ENABLE_NOALBS=%ENABLE_NOALBS% ^
+        -v "%SLS_CONF_PATH%:/etc/sls/sls.conf:ro" ^
         -p %SRTLA_PORT%:5000/udp ^
         -p %STATS_PORT%:8181 ^
         -p %SRT_PORT%:8282/udp ^
@@ -108,6 +122,7 @@ echo.
 
 docker run --rm -it --name %CONTAINER_NAME% ^
     -e ENABLE_NOALBS=%ENABLE_NOALBS% ^
+    -v "%SLS_CONF_PATH%:/etc/sls/sls.conf:ro" ^
     -p %SRTLA_PORT%:5000/udp ^
     -p %STATS_PORT%:8181 ^
     -p %SRT_PORT%:8282/udp ^
