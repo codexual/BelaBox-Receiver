@@ -62,6 +62,50 @@ srt://<your-ip>:8282/?streamid=play/stream/belabox
 
 ---
 
+## 🎥 Multiple Receivers (multi-cam)
+
+By default you get **one container with one ingest**. Nothing changes unless you ask for more.
+
+If you want several BelaBox units (e.g. main cam, POV, chest cam) shown in OBS at the same time, run **one container per stream**. Each container has its own SLS and SRTLA, so the streams stay fully separate. Don't add extra `app {}` blocks to one `sls.conf` for this.
+
+Only the **main** container (instance 1) runs NOALBS. Extra containers start with `ENABLE_NOALBS=false`, so only one thing ever switches your OBS scenes.
+
+| Instance | Container            | SRTLA ingest (BelaBox) | SLS stats | SRT (OBS)  | NOALBS |
+|----------|----------------------|------------------------|-----------|------------|--------|
+| 1 (main) | `belabox-receiver`   | 5000/udp               | 8181      | 8282/udp   | ✅     |
+| 2        | `belabox-receiver-2` | 5001/udp               | 8182      | 8283/udp   | ❌     |
+| 3        | `belabox-receiver-3` | 5002/udp               | 8183      | 8284/udp   | ❌     |
+| N        | `belabox-receiver-N` | 5000+N-1               | 8181+N-1  | 8282+N-1   | ❌     |
+
+### With the run scripts
+
+```bash
+./run.sh --detach        # main receiver (instance 1)
+./run.sh --detach 2      # extra receiver 2
+./run.sh --detach 3      # extra receiver 3
+```
+On Windows: `run.bat --detach 2` and so on. Leave out `--detach` to run one instance in the foreground, in its own terminal.
+
+### With Docker Compose
+
+```bash
+docker compose up -d                   # main receiver only (default)
+docker compose --profile multi up -d   # main + receiver-2 + receiver-3
+```
+To add more, copy a `receiver-N` block in `docker-compose.yml` and shift its host ports.
+
+### Connecting
+
+Each BelaBox points at **its own port**. The stream ID can stay `live/stream/belabox`, or you can give each one its own name:
+
+- Main cam: port `5000`, OBS source `srt://<your-ip>:8282/?streamid=play/stream/belabox`
+- POV cam: port `5001`, OBS source `srt://<your-ip>:8283/?streamid=play/stream/belabox`
+- Chest cam: port `5002`, OBS source `srt://<your-ip>:8284/?streamid=play/stream/belabox`
+
+In OBS, add one Media Source per receiver. Port-forward the extra ports too if you stream remotely.
+
+---
+
 ## 🌐 Network Access & Remote Streaming
 
 ### Port Forwarding

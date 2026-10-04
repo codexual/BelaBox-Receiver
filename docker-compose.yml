@@ -1,0 +1,48 @@
+# Default: one receiver, same as run.sh / run.bat
+#   docker compose up -d
+#
+# Multiple receivers (main + 2 extras, each with its own SLS/SRTLA):
+#   docker compose --profile multi up -d
+#
+# Only "receiver" runs NOALBS. The extras have ENABLE_NOALBS=false so they never
+# touch OBS. Add more extras by copying a block and shifting the host ports.
+
+x-receiver: &receiver
+  image: belabox-receiver
+  restart: unless-stopped
+
+services:
+  receiver:
+    <<: *receiver
+    build: .
+    container_name: belabox-receiver
+    environment:
+      ENABLE_NOALBS: "true"
+    ports:
+      - "5000:5000/udp" # SRTLA ingest (BelaBox connects here)
+      - "8181:8181"     # SLS stats
+      - "8282:8282/udp" # SRT (OBS media source)
+
+  receiver-2:
+    <<: *receiver
+    profiles: ["multi"]
+    container_name: belabox-receiver-2
+    depends_on: [receiver]
+    environment:
+      ENABLE_NOALBS: "false"
+    ports:
+      - "5001:5000/udp"
+      - "8182:8181"
+      - "8283:8282/udp"
+
+  receiver-3:
+    <<: *receiver
+    profiles: ["multi"]
+    container_name: belabox-receiver-3
+    depends_on: [receiver]
+    environment:
+      ENABLE_NOALBS: "false"
+    ports:
+      - "5002:5000/udp"
+      - "8183:8181"
+      - "8284:8282/udp"

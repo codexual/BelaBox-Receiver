@@ -107,5 +107,9 @@ RUN set -xe; \
 # Copy your config files
 COPY files/.env files/config.json /app/
 
+# NOALBS runs by default. Set ENABLE_NOALBS=false on extra receiver containers
+# so only one container controls OBS.
+ENV ENABLE_NOALBS=true
+
 EXPOSE 5000/udp 8181/tcp 8282/udp
 CMD ["/usr/bin/supervisord"]
