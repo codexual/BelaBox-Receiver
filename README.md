@@ -135,11 +135,16 @@ In OBS, add one Media Source per receiver. Port-forward the extra ports too if y
 
 When a BelaBox drops and reconnects, OBS often re-joins the stream mid-way and the audio turns to static until the media source restarts. That's what `!fix` does.
 
-Every receiver now does this by itself. A small helper, `obs-autofix`, watches the receiver's SLS stats. Each time its BelaBox (re)connects, it waits 5 seconds and then restarts that receiver's OBS media source the same way `!fix` does. It connects to OBS using the `software` settings in `files/config.json`, the same ones NOALBS uses. The extra containers don't need NOALBS for this.
+Every receiver now does this by itself. A small helper, `obs-autofix`, watches the receiver's SLS stats and restarts that receiver's OBS media source the same way `!fix` does:
+
+- **After a reconnect:** each time its BelaBox (re)connects, it waits 5 seconds, then restarts.
+- **After a burst of dropped packets:** when 5 or more packets are dropped within 10 seconds (`RCV-DROPPED` in the logs), it waits until the drops stop, then restarts. Lost packets can throw OBS's audio off even without a reconnect. To avoid constant restarts on a bad connection, this happens at most once a minute.
+
+It connects to OBS using the `software` settings in `files/config.json`, the same ones NOALBS uses. The extra containers don't need NOALBS for this.
 
 It finds the right OBS source by the **port in the source's `srt://` URL**: 8282 for the main cam, 8283 for receiver 2, 8284 for receiver 3. The run scripts and `docker-compose.yml` pass that port in as `OBS_SRT_PORT`. If your source URLs use other ports, or you'd rather pick sources by name, set `OBS_SOURCES` (comma-separated OBS source names) on that container.
 
-**Chat `!fix` / `!f` now restarts every cam.** On the main receiver, `obs-autofix` also reads your Twitch chat (anonymously, it never posts) and restarts the media sources of all receivers, in every OBS scene. It uses the same permission, admins and aliases as `chat.commands.Fix` in `config.json`. NOALBS still replies in chat as before.
+**Chat `!fix` / `!f` now restarts every cam.** On the main receiver, `obs-autofix` also reads your Twitch chat (anonymously, it never posts). It restarts the `srt://` sources on ports 8282, 8283 and 8284 in every OBS scene. Other sources, like security cams or a local RTMP feed, are left alone. Change the ports with `FIX_ALL_PORTS`, or add sources by name with `FIX_ALL_SOURCES`. It uses the same permission, admins and aliases as `chat.commands.Fix` in `config.json`. NOALBS still replies in chat and still runs its own fix on the live scene.
 
 Useful commands:
 
@@ -149,7 +154,9 @@ docker exec belabox-receiver-2 obs-autofix --now         # restart this receiver
 docker exec belabox-receiver obs-autofix --now --all     # restart every receiver's OBS source now
 ```
 
-Set `AUTO_FIX=false` on a container to turn this off. `AUTOFIX_DELAY` changes the 5 second wait.
+Set `AUTO_FIX=false` on a container to turn this off. `AUTOFIX_DELAY` changes the 5 second wait after a reconnect. `AUTOFIX_DROPS` (default 5, `0` turns burst restarts off), `AUTOFIX_DROP_WINDOW` (10 seconds) and `AUTOFIX_DROP_COOLDOWN` (60 seconds) tune the burst restarts.
+
+Fewer drops means fewer restarts. If you see a lot of `RCV-DROPPED`, raise the SRT latency on the BelaBox and set `latency` in that receiver's `sls.conf` to match (3000–4000 ms is common for IRL).
 
 ---
 

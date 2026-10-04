@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// obs-autofix: restarts this receiver's OBS media source every time its BelaBox
-// (re)connects, the same thing NOALBS !fix does. OBS often joins a stream
-// mid-reconnect and ends up with broken/static audio until the source restarts.
+// obs-autofix: restarts this receiver's OBS media source, the same thing NOALBS
+// !fix does, whenever OBS is likely to end up with broken/static audio:
+//   - every time the BelaBox (re)connects (OBS often joins mid-stream), and
+//   - after a burst of dropped packets (lost data can desync OBS's audio).
 //
 // On the main receiver it also listens to Twitch chat, so !fix / !f restarts
 // the media sources of ALL receivers, in every OBS scene.
@@ -13,7 +14,13 @@
 //   OBS_SOURCES      optional comma-separated OBS source names to restart
 //                    instead of matching by port.
 //   AUTOFIX_DELAY    seconds to wait after a reconnect before restarting (5).
+//   AUTOFIX_DROPS    dropped packets within AUTOFIX_DROP_WINDOW that count as
+//                    a burst and trigger a restart (5). 0 turns this off.
+//   AUTOFIX_DROP_WINDOW    seconds (10).
+//   AUTOFIX_DROP_COOLDOWN  minimum seconds between burst restarts (60).
 //   CHAT_FIX_ALL     "true" to make chat !fix restart every receiver's source.
+//   FIX_ALL_PORTS    SRT ports chat !fix treats as receivers (8282,8283,8284).
+//   FIX_ALL_SOURCES  extra OBS source names chat !fix also restarts.
 //   OBS_HOST, OBS_PORT, OBS_PASSWORD  override config.json.
 
 const fs = require('fs');
@@ -36,6 +43,12 @@ const obs = {
 const srtPort = String(process.env.OBS_SRT_PORT || '8282');
 const sourceNames = (process.env.OBS_SOURCES || '').split(',').map((s) => s.trim()).filter(Boolean);
 const delayMs = Number(process.env.AUTOFIX_DELAY || 5) * 1000;
+const list = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
+const allPorts = list(process.env.FIX_ALL_PORTS || '8282,8283,8284');
+const allSourceNames = list(process.env.FIX_ALL_SOURCES);
+const dropThreshold = Number(process.env.AUTOFIX_DROPS ?? 5);
+const dropWindowMs = Number(process.env.AUTOFIX_DROP_WINDOW || 10) * 1000;
+const dropCooldownMs = Number(process.env.AUTOFIX_DROP_COOLDOWN || 60) * 1000;
 
 const log = (...args) => console.log(new Date().toISOString(), ...args);
 
@@ -98,7 +111,20 @@ function urlPort(url) {
 
 const isNetworkUrl = (url) => /^(srt|rtmp|udp|rist|rtsp):/i.test(url);
 
-// Restart media sources. allReceivers=false: only this receiver's source(s).
+// Is this OBS source one we should restart?
+//   allReceivers=false: only this receiver's source (OBS_SOURCES, else by port).
+//   allReceivers=true:  every receiver's source (srt:// on FIX_ALL_PORTS, plus
+//                       FIX_ALL_SOURCES). Other cams in OBS are left alone.
+function isTarget(allReceivers, name, urls) {
+  if (allReceivers) {
+    if (allSourceNames.includes(name)) return true;
+    return urls.some((u) => /^srt:/i.test(u) && allPorts.includes(urlPort(u)));
+  }
+  if (!urls.some(isNetworkUrl)) return false;
+  if (sourceNames.length) return sourceNames.includes(name);
+  return urls.some((u) => urlPort(u) === srtPort);
+}
+
 async function restartSources(allReceivers, why) {
   const restarted = await obsSession(async (request) => {
     const { inputs } = await request('GetInputList');
@@ -109,9 +135,7 @@ async function restartSources(allReceivers, why) {
       if (!allReceivers && sourceNames.length && !sourceNames.includes(name)) continue;
 
       const { inputSettings } = await request('GetInputSettings', { inputName: name });
-      const urls = sourceUrls(input.inputKind, inputSettings);
-      if (!urls.some(isNetworkUrl)) continue;
-      if (!allReceivers && !sourceNames.length && !urls.some((u) => urlPort(u) === srtPort)) continue;
+      if (!isTarget(allReceivers, name, sourceUrls(input.inputKind, inputSettings))) continue;
 
       // Same methods NOALBS !fix uses.
       if (input.inputKind === 'smooth_media_source') {
@@ -129,7 +153,7 @@ async function restartSources(allReceivers, why) {
   });
 
   if (restarted.length) log(`${why}: restarted OBS source(s): ${restarted.join(', ')}`);
-  else if (allReceivers) log(`${why}: no SRT/RTMP media sources found in OBS`);
+  else if (allReceivers) log(`${why}: no OBS source uses SRT port ${allPorts.join('/')}`);
   else log(`${why}: no OBS media source uses port ${srtPort}. Set OBS_SOURCES to the source name.`);
 }
 
@@ -147,15 +171,39 @@ function getStats() {
   });
 }
 
-let lastUptime = new Map(); // publisher -> uptime
+let last = new Map(); // publisher -> { uptime, drops }
+let drops = [];       // [time, packets] dropped recently, all publishers
 let fixTimer = null;
+let burstSince = 0;   // when the pending burst restart was first scheduled
+let lastBurstAt = 0;  // when the last burst restart was triggered
 
-function scheduleFix(publisher) {
+function scheduleFix(why, ms) {
   // Debounce: a flapping connection only gets one restart, once it settles.
   clearTimeout(fixTimer);
   fixTimer = setTimeout(() => {
-    restartSources(false, `${publisher} reconnected`).catch((e) => log(`OBS restart failed: ${e.message}`));
-  }, delayMs);
+    fixTimer = null;
+    burstSince = 0;
+    restartSources(false, why).catch((e) => log(`OBS restart failed: ${e.message}`));
+  }, ms);
+}
+
+function checkDrops(publisher, newDrops) {
+  const now = Date.now();
+  if (newDrops > 0) drops.push([now, newDrops]);
+  drops = drops.filter(([t]) => now - t <= dropWindowMs);
+  if (dropThreshold <= 0 || newDrops <= 0) return;
+
+  const total = drops.reduce((n, [, d]) => n + d, 0);
+  if (burstSince) {
+    // Burst restart already pending: wait until the drops stop (2s quiet),
+    // but never longer than 10s after the burst started.
+    if (now - burstSince < 10000) scheduleFix(`${publisher} drop burst`, 2000);
+    return;
+  }
+  if (total < dropThreshold || fixTimer || now - lastBurstAt < dropCooldownMs) return;
+  log(`${publisher}: ${total} packets dropped in ${dropWindowMs / 1000}s, restarting OBS source once it settles`);
+  burstSince = lastBurstAt = now;
+  scheduleFix(`${publisher} drop burst`, 2000);
 }
 
 async function poll() {
@@ -163,15 +211,19 @@ async function poll() {
   if (stats) {
     const now = new Map();
     for (const [publisher, s] of Object.entries(stats.publishers || {})) {
-      const uptime = Number(s && s.uptime) || 0;
-      now.set(publisher, uptime);
-      const before = lastUptime.get(publisher);
-      if (before === undefined || uptime < before) {
+      // Without ?reset, SLS reports pktRcvDrop as a running total per connection.
+      const cur = { uptime: Number(s && s.uptime) || 0, drops: Number(s && s.pktRcvDrop) || 0 };
+      now.set(publisher, cur);
+      const before = last.get(publisher);
+      if (!before || cur.uptime < before.uptime || cur.drops < before.drops) {
         log(`publisher ${publisher} connected`);
-        scheduleFix(publisher);
+        burstSince = 0;
+        scheduleFix(`${publisher} reconnected`, delayMs);
+      } else {
+        checkDrops(publisher, cur.drops - before.drops);
       }
     }
-    lastUptime = now;
+    last = now;
   }
   setTimeout(poll, POLL_MS);
 }
@@ -245,7 +297,8 @@ if (process.argv.includes('--now')) {
     .catch((e) => { log(`OBS restart failed: ${e.message}`); process.exit(1); });
 } else {
   log(`watching ${STATS_URL}; OBS ${obs.host}:${obs.port}; ` +
-      (sourceNames.length ? `sources: ${sourceNames.join(', ')}` : `sources on SRT port ${srtPort}`));
+      (sourceNames.length ? `sources: ${sourceNames.join(', ')}` : `sources on SRT port ${srtPort}`) +
+      (dropThreshold > 0 ? `; restart after ${dropThreshold}+ dropped packets in ${dropWindowMs / 1000}s` : ''));
   poll();
   if (String(process.env.CHAT_FIX_ALL).toLowerCase() === 'true') startChat();
 }
