@@ -15,9 +15,9 @@
 //                    instead of matching by port.
 //   AUTOFIX_DELAY    seconds to wait after a reconnect before restarting (5).
 //   AUTOFIX_DROPS    dropped packets within AUTOFIX_DROP_WINDOW that count as
-//                    a burst and trigger a restart (5). 0 turns this off.
+//                    a burst and trigger a restart (20). 0 turns this off.
 //   AUTOFIX_DROP_WINDOW    seconds (10).
-//   AUTOFIX_DROP_COOLDOWN  minimum seconds between burst restarts (60).
+//   AUTOFIX_DROP_COOLDOWN  minimum seconds between burst restarts (180).
 //   CHAT_FIX_ALL     "true" to make chat !fix restart every receiver's source.
 //   FIX_ALL_PORTS    SRT ports chat !fix treats as receivers (8282,8283,8284).
 //   FIX_ALL_SOURCES  extra OBS source names chat !fix also restarts.
@@ -46,9 +46,9 @@ const delayMs = Number(process.env.AUTOFIX_DELAY || 5) * 1000;
 const list = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const allPorts = list(process.env.FIX_ALL_PORTS || '8282,8283,8284');
 const allSourceNames = list(process.env.FIX_ALL_SOURCES);
-const dropThreshold = Number(process.env.AUTOFIX_DROPS ?? 5);
+const dropThreshold = Number(process.env.AUTOFIX_DROPS ?? 20);
 const dropWindowMs = Number(process.env.AUTOFIX_DROP_WINDOW || 10) * 1000;
-const dropCooldownMs = Number(process.env.AUTOFIX_DROP_COOLDOWN || 60) * 1000;
+const dropCooldownMs = Number(process.env.AUTOFIX_DROP_COOLDOWN || 180) * 1000;
 
 const log = (...args) => console.log(new Date().toISOString(), ...args);
 

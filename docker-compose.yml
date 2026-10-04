@@ -22,6 +22,11 @@ services:
     environment:
       ENABLE_NOALBS: "true"
       OBS_SRT_PORT: "8282" # must match the port in this receiver's OBS source URL
+      # Burst restarts: restart this cam in OBS after AUTOFIX_DROPS lost packets
+      # within 10s, at most once every AUTOFIX_DROP_COOLDOWN seconds. Raise
+      # AUTOFIX_DROPS for fewer blips, lower it if audio still breaks. 0 = off.
+      AUTOFIX_DROPS: "20"
+      AUTOFIX_DROP_COOLDOWN: "180"
     volumes:
       - ./files/sls.conf:/etc/sls/sls.conf:ro
     ports:
@@ -37,6 +42,8 @@ services:
     environment:
       ENABLE_NOALBS: "false"
       OBS_SRT_PORT: "8283"
+      AUTOFIX_DROPS: "20"
+      AUTOFIX_DROP_COOLDOWN: "180"
     volumes:
       - ./files/sls-2.conf:/etc/sls/sls.conf:ro
     ports:
@@ -52,6 +59,8 @@ services:
     environment:
       ENABLE_NOALBS: "false"
       OBS_SRT_PORT: "8284"
+      AUTOFIX_DROPS: "20"
+      AUTOFIX_DROP_COOLDOWN: "180"
     volumes:
       - ./files/sls-3.conf:/etc/sls/sls.conf:ro
     ports:

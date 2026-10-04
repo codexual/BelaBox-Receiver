@@ -138,7 +138,7 @@ When a BelaBox drops and reconnects, OBS often re-joins the stream mid-way and t
 Every receiver now does this by itself. A small helper, `obs-autofix`, watches the receiver's SLS stats and restarts that receiver's OBS media source the same way `!fix` does:
 
 - **After a reconnect:** each time its BelaBox (re)connects, it waits 5 seconds, then restarts.
-- **After a burst of dropped packets:** when 5 or more packets are dropped within 10 seconds (`RCV-DROPPED` in the logs), it waits until the drops stop, then restarts. Lost packets can throw OBS's audio off even without a reconnect. To avoid constant restarts on a bad connection, this happens at most once a minute.
+- **After a burst of dropped packets:** when 20 or more packets are dropped within 10 seconds (`RCV-DROPPED` in the logs), it waits until the drops stop, then restarts. Lost packets can throw OBS's audio off even without a reconnect. To avoid constant restarts on a bad connection, this happens at most once every 3 minutes per cam.
 
 It connects to OBS using the `software` settings in `files/config.json`, the same ones NOALBS uses. The extra containers don't need NOALBS for this.
 
@@ -154,7 +154,7 @@ docker exec belabox-receiver-2 obs-autofix --now         # restart this receiver
 docker exec belabox-receiver obs-autofix --now --all     # restart every receiver's OBS source now
 ```
 
-Set `AUTO_FIX=false` on a container to turn this off. `AUTOFIX_DELAY` changes the 5 second wait after a reconnect. `AUTOFIX_DROPS` (default 5, `0` turns burst restarts off), `AUTOFIX_DROP_WINDOW` (10 seconds) and `AUTOFIX_DROP_COOLDOWN` (60 seconds) tune the burst restarts.
+Set `AUTO_FIX=false` on a container to turn this off. `AUTOFIX_DELAY` changes the 5 second wait after a reconnect. `AUTOFIX_DROPS` (default 20, `0` turns burst restarts off), `AUTOFIX_DROP_WINDOW` (10 seconds) and `AUTOFIX_DROP_COOLDOWN` (180 seconds) tune the burst restarts.
 
 Fewer drops means fewer restarts. If you see a lot of `RCV-DROPPED`, raise the SRT latency on the BelaBox and set `latency` in that receiver's `sls.conf` to match (3000–4000 ms is common for IRL).
 
