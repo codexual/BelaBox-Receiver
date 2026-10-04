@@ -131,6 +131,14 @@ Each BelaBox points at **its own port**. The stream ID can stay `live/stream/bel
 
 In OBS, add one Media Source per receiver. Port-forward the extra ports too if you stream remotely.
 
+### `!fix` and the extra cams
+
+`!fix` / `!f` does not care which container a stream comes from. NOALBS (in the main container) asks OBS for the **current program scene** and restarts every SRT/RTMP media source in it. That includes sources inside nested scenes and groups, and hidden sources. A source in any other scene is skipped.
+
+So put every cam in the scene you're live on, for example `live`. If the POV or chest cam lives in its own scene, add that scene to `live` as a **Scene** source (you can hide it). One `!fix` then restarts all of them.
+
+The extra containers don't need NOALBS for this, and you should not add them to `streamServers` in `config.json`. That list drives scene switching, not `!fix`.
+
 ---
 
 ## 🌐 Network Access & Remote Streaming
